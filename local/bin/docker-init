@@ -1,0 +1,111 @@
+#!/bin/sh
+
+set -e
+
+LC_ALL=C
+
+MACHINE=$(uname -m)
+
+if [ "${MACHINE}" = "x86_64" ]; then
+	sed -i -e "/^#\[multilib\]/{N; s/#\(\[multilib\]\)\n#\(.*\)$/\1\n\2/g}" /etc/pacman.conf
+fi
+
+docker-install -r -u
+
+if [ ! -z "$(pacman -Qq vi 2>/dev/null)" ]; then
+	pacman -Rsn --noconfirm "$(pacman -Qq vi 2>/dev/null)"
+fi
+
+docker-install --needed $(pacman -Ssq | grep '^\(linux-headers\|linux-armv7-headers\|linux-aarch64-headers\)$') $(pacman -Sqg base | grep -v '^\(cryptsetup\|device-mapper\|dhcpcd\|jfsutils\|linux\|logrotate\|lvm2\|man-db\|man-pages\|mdadm\|netctl\|pciutils\|pcmciautils\|reiserfsprogs\|s-nail\|systemd-sysvcompat\|usbutils\|xfsprogs\|vi\)$') asp bash-completion pkgfile python python2 rsync sudo vim wget unzip zip openssh cpio bc --assume-installed linux
+
+if [ "${MACHINE}" = "x86_64" ]; then
+	#if [ ! -z "$(pacman -Qq gcc 2>/dev/null)" ]; then
+	#	pacman -Rdd --noconfirm "$(pacman -Qq gcc 2>/dev/null)"
+	#fi
+	#if [ ! -z "$(pacman -Qq gcc-libs 2>/dev/null)" ]; then
+	#	pacman -Rdd --noconfirm --dbonly "$(pacman -Qq gcc-libs 2>/dev/null)"
+	#fi
+	#pacman -S --force --noconfirm gcc-libs-multilib
+	#docker-install --needed $(pacman -Sgq base-devel | grep -v '^gcc$') multilib-devel gdb git python python2 subversion distcc ccache cscope ctags arch-install-scripts
+	docker-install --needed base-devel multilib-devel gdb git python python2 subversion distcc ccache cscope ctags arch-install-scripts
+else
+	docker-install --needed base-devel gdb git python python2 subversion distcc ccache cscope ctags arch-install-scripts
+fi
+
+#python2
+if [ ! -z "$(pacman -Qi python2 | grep "Version" | grep "2.7.13-\(2\|3\|4\)")" ]; then
+	sed -i -e 's/[#]\?\(IgnorePkg   =.*\)$/\1 python2/g' /etc/pacman.conf
+	if [ "${MACHINE}" = "x86_64" ]; then
+		wget --no-check-certificate http://fraggod.net/static/mirror/packages/archlinux/x86_64/python2-2.7.13-1-x86_64.pkg.tar.xz -O /python2-2.7.13-1-x86_64.pkg.tar.xz
+		pacman -U --noconfirm /python2-2.7.13-1-x86_64.pkg.tar.xz
+		rm -rf /python2-2.7.13-1-x86_64.pkg.tar.xz
+	elif [ "${MACHINE}" = "armv7l" ]; then
+		wget --no-check-certificate http://tardis.tiny-vps.com/aarm/packages/p/python2/python2-2.7.13-1-armv7h.pkg.tar.xz -O /python2-2.7.13-1-armv7h.pkg.tar.xz
+		pacman -U --noconfirm /python2-2.7.13-1-armv7h.pkg.tar.xz
+		rm -rf /python2-2.7.13-1-armv7h.pkg.tar.xz
+	elif [ "${MACHINE}" = "aarch64" ]; then
+		wget --no-check-certificate http://tardis.tiny-vps.com/aarm/packages/p/python2/python2-2.7.13-1-aarch64.pkg.tar.xz -O /python2-2.7.13-1-aarch64.pkg.tar.xz
+		pacman -U --noconfirm /python2-2.7.13-1-aarch64.pkg.tar.xz
+		rm -rf /python2-2.7.13-1-aarch64.pkg.tar.xz
+	fi
+fi
+
+docker-install -c
+
+#sed -i -e "s/^#ko_KR.UTF-8/ko_KR.UTF-8/g" /etc/locale.gen
+#locale-gen
+
+if [ "${MACHINE}" != "$(echo ${MACHINE} | sed -e "s/arm//g")" -o "${MACHINE}" = "aarch64" ]; then
+	qemu=
+	if [ "${MACHINE}" != "$(echo ${MACHINE} | sed -e "s/arm//g")" ]; then
+		qemu=qemu-arm-static
+	elif [ "${MACHINE}" = "aarch64" ]; then
+		qemu=qemu-aarch64-static
+	fi
+	if [ ! -z "${qemu}" -a -e /usr/bin/${qemu} ]; then
+		cp /usr/bin/${qemu} /usr/local/bin/
+		chmod 4755 /usr/local/bin/${qemu}
+
+		cat << EOF > /usr/local/bin/sudo
+#!/bin/sh
+
+qemu=/usr/local/bin/${qemu}
+sudo=/usr/bin/sudo
+
+if grep -q -w lm /proc/cpuinfo ; then
+	if [ "\$(basename "\${0}")" = "sudoedit" ]; then
+		\${qemu} -execve -0 /bin/sh \${sudo} -e "\${@}"
+	else
+		\${qemu} -execve -0 /bin/sh \${sudo} "\${@}"
+	fi
+else
+	if [ "\$(basename "\${0}")" = "sudoedit" ]; then
+		\${sudo} -e "\${@}"
+	else
+		\${sudo} "\${@}"
+	fi
+fi
+
+exit \$?
+EOF
+		chmod 4755 /usr/local/bin/sudo
+		ln -s sudo /usr/local/bin/sudoedit
+	fi
+fi
+
+ln -s /usr/bin/vim /usr/local/bin/vi
+
+mkdir -p /etc/sudoers.d
+ln -sf /usr/local/etc/sudoers /etc/sudoers.d/sudoers
+
+sed -i -e "s/if (( EUID == 0 ))/if (( EUID == -1 ))/g" /usr/bin/makepkg
+
+sed -i -e "s/^#\(Color\)/\1/g" -e "s/#\(VerbosePkgLists\)/\1/g" /etc/pacman.conf
+
+sed -i -e "s/^\(alias\)/#\1/g" -e "s/^\(PS1\)=/#\1=/g" /etc/skel/.bashrc
+cp -R /etc/skel/. /root/
+
+if [ "${MACHINE}" = "armv7l" -o "${MACHINE}" = "aarch64" ]; then
+	sed -i -e 's@^\(SHELL=/bin/bash\) unshare --fork --pid @\1 @g' /usr/bin/arch-chroot
+fi
+

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+sudo pacman -Suy --noconfirm
+
+makepkg -cCs --noconfirm --skippgpcheck $*
+
