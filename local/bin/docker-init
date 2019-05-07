@@ -10,7 +10,7 @@ if [ "${MACHINE}" = "x86_64" ]; then
 	sed -i -e "/^#\[multilib\]/{N; s/#\(\[multilib\]\)\n#\(.*\)$/\1\n\2/g}" /etc/pacman.conf
 fi
 
-docker-install -r -u
+docker-install -r -u su-exec
 
 if [ ! -z "$(pacman -Qq vi 2>/dev/null)" ]; then
 	pacman -Rsn --noconfirm "$(pacman -Qq vi 2>/dev/null)"
