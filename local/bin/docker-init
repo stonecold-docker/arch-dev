@@ -55,45 +55,7 @@ docker-install -c
 #sed -i -e "s/^#ko_KR.UTF-8/ko_KR.UTF-8/g" /etc/locale.gen
 #locale-gen
 
-if [ "${MACHINE}" != "$(echo ${MACHINE} | sed -e "s/arm//g")" -o "${MACHINE}" = "aarch64" ]; then
-	qemu=
-	if [ "${MACHINE}" != "$(echo ${MACHINE} | sed -e "s/arm//g")" ]; then
-		qemu=qemu-arm-static
-	elif [ "${MACHINE}" = "aarch64" ]; then
-		qemu=qemu-aarch64-static
-	fi
-	if [ ! -z "${qemu}" -a -e /usr/bin/${qemu} ]; then
-		cp /usr/bin/${qemu} /usr/local/bin/
-		chmod 4755 /usr/local/bin/${qemu}
-
-		cat << EOF > /usr/local/bin/sudo
-#!/bin/sh
-
-qemu=/usr/local/bin/${qemu}
-sudo=/usr/bin/sudo
-
-if grep -q -w lm /proc/cpuinfo ; then
-	if [ "\$(basename "\${0}")" = "sudoedit" ]; then
-		\${qemu} -execve -0 /bin/sh \${sudo} -e "\${@}"
-	else
-		\${qemu} -execve -0 /bin/sh \${sudo} "\${@}"
-	fi
-else
-	if [ "\$(basename "\${0}")" = "sudoedit" ]; then
-		\${sudo} -e "\${@}"
-	else
-		\${sudo} "\${@}"
-	fi
-fi
-
-exit \$?
-EOF
-		chmod 4755 /usr/local/bin/sudo
-		ln -s sudo /usr/local/bin/sudoedit
-	fi
-fi
-
-ln -s /usr/bin/vim /usr/local/bin/vi
+ln -sf /usr/bin/vim /usr/local/bin/vi
 
 mkdir -p /etc/sudoers.d
 ln -sf /usr/local/etc/sudoers /etc/sudoers.d/sudoers
