@@ -1,6 +1,6 @@
-ARG BUILD_ARCH=x64
+#ARG BUILD_TAG=latest
 
-FROM forumi0721/arch-x64-base:latest
+FROM forumi0721/arch-base:latest
 
 LABEL maintainer="forumi0721@gmail.com"
 
