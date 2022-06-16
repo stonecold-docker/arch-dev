@@ -11,7 +11,7 @@ if [ ! -z "$(pacman -Qq vi 2>/dev/null)" ]; then
 	pacman -Rsn --noconfirm "$(pacman -Qq vi 2>/dev/null)"
 fi
 PKG_LIB="$(pacman -Ssq | grep '^\(linux-headers\|linux-armv7-headers\|linux-aarch64-headers\)$') $(pacman -Sqg base | grep -v '^\(cryptsetup\|device-mapper\|dhcpcd\|jfsutils\|linux\|logrotate\|lvm2\|man-db\|man-pages\|mdadm\|netctl\|pciutils\|pcmciautils\|reiserfsprogs\|s-nail\|systemd-sysvcompat\|usbutils\|xfsprogs\|vi\)$') asp bash-completion pkgfile rsync sudo vim wget unzip zip openssh cpio bc"
-PKG_LIB="${PKG_LIB} base-devel gdb git python python-virtualenv python-pip python2 python2-pip subversion distcc ccache cscope ctags arch-install-scripts"
+PKG_LIB="${PKG_LIB} base-devel gdb git python python-virtualenv python-pip subversion distcc ccache cscope ctags arch-install-scripts"
 PKG_LIB="${PKG_LIB} su-exec"
 if [ "$(uname -m)" = "x86_64" ]; then
 	sed -i -e "/^#\[multilib\]/{N; s/#\(\[multilib\]\)\n#\(.*\)$/\1\n\2/g}" /etc/pacman.conf
